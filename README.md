@@ -1,22 +1,21 @@
 # FORMA — Anatomy-led Workout Lab
 
-Interactive workout web app: select a muscle on a **3D anatomical body**, then browse **exercises** and **stretches** with form illustrations and coaching detail.
+Interactive workout web app: select a muscle on a **real anatomical body map**, then browse **exercises** and **stretches** with **animated GIF demos** and step-by-step coaching.
 
 ## Features
 
-- Clickable 3D human figure (front / back views, orbit & zoom)
-- 15 muscle groups with color highlighting
-- Exercise library with sets/reps, form cues, common mistakes, and step-by-step guides
-- Stretch library with hold times, benefits, and safety tips
-- SVG pose visuals for every movement
-- Responsive layout for desktop and mobile
+- Anatomical SVG body map (male/female, front/back) via [`react-muscle-highlighter`](https://www.npmjs.com/package/react-muscle-highlighter)
+- Live exercise & stretch data from [ExerciseDB](https://oss.exercisedb.dev) (AscendAPI free tier)
+- Animated demonstration GIFs for each movement
+- Instructions, equipment, primary/secondary muscles
+- Responsive desktop + mobile layout
 
 ## Stack
 
-- [Next.js](https://nextjs.org) (App Router)
-- React Three Fiber + Drei
+- Next.js (App Router) + TypeScript
+- `react-muscle-highlighter`
+- ExerciseDB HTTP API (proxied via `/api/exercises`)
 - Tailwind CSS + Framer Motion
-- TypeScript
 
 ## Getting started
 
@@ -27,13 +26,11 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-## Scripts
+## Attribution
 
-| Command        | Description              |
-| -------------- | ------------------------ |
-| `npm run dev`  | Local development server |
-| `npm run build`| Production build         |
-| `npm run start`| Serve production build   |
+Exercise metadata and GIF media are provided by **ExerciseDB / AscendAPI** ([oss.exercisedb.dev](https://oss.exercisedb.dev)). Free-tier use is for personal, educational, and non-commercial projects — see their docs for commercial licensing.
+
+Body anatomy UI powered by **react-muscle-highlighter** (MIT).
 
 ## Repo
 

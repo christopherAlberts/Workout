@@ -1,42 +1,51 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
-import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { muscles, getMuscle } from "@/data/muscles";
-import { getExercisesForMuscle } from "@/data/exercises";
-import { getStretchesForMuscle } from "@/data/stretches";
-import type { Exercise, MuscleId, Mode, Stretch, ViewSide } from "@/data/types";
+import { muscles, getMuscle, type EdbExercise, type Gender, type Mode, type MuscleId, type ViewSide } from "@/data/muscles";
 import { DetailPanel } from "./DetailPanel";
-
-const AnatomyViewer = dynamic(
-  () => import("./AnatomyViewer").then((m) => m.AnatomyViewer),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="anatomy-stage anatomy-loading">
-        <div className="spinner" />
-        <p>Loading 3D anatomy…</p>
-      </div>
-    ),
-  },
-);
+import { AnatomyViewer } from "./AnatomyViewer";
 
 export function WorkoutApp() {
   const [selectedId, setSelectedId] = useState<MuscleId | null>("chest");
   const [view, setView] = useState<ViewSide>("front");
+  const [gender, setGender] = useState<Gender>("male");
   const [mode, setMode] = useState<Mode>("exercises");
-  const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
-  const [selectedStretch, setSelectedStretch] = useState<Stretch | null>(null);
+  const [items, setItems] = useState<EdbExercise[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedItem, setSelectedItem] = useState<EdbExercise | null>(null);
 
   const muscle = selectedId ? getMuscle(selectedId) : null;
-  const exercises = selectedId ? getExercisesForMuscle(selectedId) : [];
-  const stretches = selectedId ? getStretchesForMuscle(selectedId) : [];
+
+  useEffect(() => {
+    if (!selectedId) return;
+
+    const controller = new AbortController();
+    setLoading(true);
+    setError(null);
+    setSelectedItem(null);
+
+    fetch(`/api/exercises?muscle=${selectedId}&mode=${mode}`, {
+      signal: controller.signal,
+    })
+      .then(async (res) => {
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || "Failed to load");
+        setItems(json.data ?? []);
+      })
+      .catch((err: unknown) => {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        setItems([]);
+        setError(err instanceof Error ? err.message : "Failed to load exercises");
+      })
+      .finally(() => setLoading(false));
+
+    return () => controller.abort();
+  }, [selectedId, mode]);
 
   function handleSelect(id: MuscleId) {
     setSelectedId(id);
-    setSelectedExercise(null);
-    setSelectedStretch(null);
     const m = getMuscle(id);
     if (m && !m.views.includes(view) && m.views.length === 1) {
       setView(m.views[0]);
@@ -73,8 +82,10 @@ export function WorkoutApp() {
           <AnatomyViewer
             selected={selectedId}
             view={view}
+            gender={gender}
             onSelect={handleSelect}
             onViewChange={setView}
+            onGenderChange={setGender}
           />
 
           <div className="muscle-rail" aria-label="Muscle quick select">
@@ -83,7 +94,7 @@ export function WorkoutApp() {
                 key={m.id}
                 type="button"
                 className={`rail-chip ${selectedId === m.id ? "active" : ""}`}
-                  style={{ "--chip": m.color } as CSSProperties}
+                style={{ ["--chip" as string]: m.color }}
                 onClick={() => handleSelect(m.id)}
               >
                 <i style={{ background: m.color }} />
@@ -98,18 +109,17 @@ export function WorkoutApp() {
             <DetailPanel
               muscle={muscle}
               mode={mode}
-              exercises={exercises}
-              stretches={stretches}
-              selectedExercise={selectedExercise}
-              selectedStretch={selectedStretch}
-              onSelectExercise={setSelectedExercise}
-              onSelectStretch={setSelectedStretch}
+              items={items}
+              loading={loading}
+              error={error}
+              selected={selectedItem}
+              onSelect={setSelectedItem}
               onModeChange={setMode}
             />
           ) : (
             <div className="detail-panel empty-panel">
               <h2>Choose a muscle</h2>
-              <p>Tap the 3D body or use the muscle rail to explore exercises and stretches.</p>
+              <p>Tap the anatomy map or use the muscle rail to explore exercises and stretches.</p>
             </div>
           )}
         </section>

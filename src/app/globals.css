@@ -215,6 +215,12 @@ button {
   pointer-events: auto;
 }
 
+.toolbar-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
 .view-toggle {
   display: inline-flex;
   padding: 0.25rem;
@@ -263,10 +269,43 @@ button {
   height: 520px;
 }
 
-.anatomy-canvas-wrap canvas {
-  width: 100% !important;
-  height: 100% !important;
-  touch-action: none;
+.anatomy-svg-wrap {
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(ellipse at 50% 35%, rgba(200, 245, 66, 0.1), transparent 55%),
+    linear-gradient(180deg, #151b24 0%, #0f1319 100%);
+}
+
+.body-svg {
+  display: grid;
+  place-items: center;
+  transform: translateY(0.5rem);
+  transition: transform 0.35s ease;
+  animation: body-enter 0.7s ease both;
+}
+
+.body-svg svg {
+  max-height: 460px;
+  width: auto;
+  overflow: visible;
+}
+
+.body-svg svg path,
+.body-svg svg polygon {
+  transition: fill 0.2s ease, opacity 0.2s ease;
+  cursor: pointer;
+}
+
+@keyframes body-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0.5rem) scale(1);
+  }
 }
 
 .anatomy-label {
@@ -453,6 +492,75 @@ button {
   background: rgba(12, 16, 20, 0.45);
   border: 1px solid rgba(238, 242, 236, 0.07);
   transition: border-color 0.2s, transform 0.2s, background 0.2s;
+}
+
+.media-card {
+  grid-template-columns: 120px 1fr;
+}
+
+.gif-thumb,
+.gif-hero {
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0a0d11;
+  border: 1px solid rgba(238, 242, 236, 0.08);
+}
+
+.gif-thumb {
+  aspect-ratio: 1;
+}
+
+.gif-thumb img,
+.gif-hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.gif-hero {
+  aspect-ratio: 4 / 3;
+  margin-bottom: 1rem;
+  max-height: 280px;
+}
+
+.gif-hero img {
+  object-fit: contain;
+  background: #0a0d11;
+}
+
+.state-block {
+  display: grid;
+  place-items: center;
+  gap: 0.55rem;
+  padding: 2.5rem 1rem;
+  color: var(--ink-muted);
+  text-align: center;
+}
+
+.state-block.error {
+  color: #ffb39f;
+}
+
+.spin {
+  animation: spin 0.8s linear infinite;
+}
+
+.api-credit {
+  margin: 1.1rem 0 0;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(238, 242, 236, 0.08);
+  color: var(--ink-muted);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.api-credit a {
+  color: var(--lime);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
 }
 
 .movement-card:hover {
