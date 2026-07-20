@@ -9,6 +9,11 @@ const nextConfig: NextConfig = {
         hostname: "static.exercisedb.dev",
         pathname: "/media/**",
       },
+      {
+        protocol: "https",
+        hostname: "upload.wikimedia.org",
+        pathname: "/wikipedia/commons/**",
+      },
     ],
   },
 };

@@ -1,7 +1,14 @@
-import type { EdbExercise, Muscle, Mode } from "@/data/muscles";
+import type { EdbExercise, Gender, Muscle, Mode } from "@/data/muscles";
+import { getLocalStretches } from "@/data/stretch-catalog";
+import { preferGenderMedia } from "@/lib/gender-media";
 
 const EDB_BASE = "https://oss.exercisedb.dev/api/v1";
 const GIF_BASE = "https://static.exercisedb.dev/media";
+
+const RETRYABLE = new Set([429, 502, 503, 504]);
+const PAGE_SIZE = 25;
+const MAX_PAGES = 2;
+const EXERCISE_LIMIT = 36;
 
 type EdbListResponse = {
   success?: boolean;
@@ -20,13 +27,13 @@ async function edbFetch<T>(path: string, attempt = 0): Promise<T> {
   const res = await fetch(`${EDB_BASE}${path}`, {
     headers: {
       Accept: "application/json",
-      "User-Agent": "FORMA-Workout/1.0",
+      "User-Agent": "Workout/1.0",
     },
     next: { revalidate: 60 * 60 * 24 },
   });
 
-  if (res.status === 429 && attempt < 3) {
-    await sleep(800 * (attempt + 1));
+  if (RETRYABLE.has(res.status) && attempt < 3) {
+    await sleep(400 * (attempt + 1));
     return edbFetch<T>(path, attempt + 1);
   }
 
@@ -59,67 +66,88 @@ function normalize(item: EdbExercise): EdbExercise {
   };
 }
 
-async function fetchByPrimaryTarget(target: string, limit = 25) {
-  const qs = new URLSearchParams({
-    targetMuscles: target,
-    limit: String(limit),
+function dedupe(items: EdbExercise[]) {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    if (seen.has(item.exerciseId)) return false;
+    seen.add(item.exerciseId);
+    return true;
   });
-  const payload = await edbFetch<EdbListResponse>(`/exercises/muscles?${qs}`);
-  return (payload.data ?? []).map(normalize);
 }
 
-async function fetchStretches(muscle: Muscle) {
-  // Prefer a single target-muscle call (includes GIFs + instructions)
-  const fromTargets = await fetchByPrimaryTarget(muscle.edbTargets[0], 25);
-  const stretches = fromTargets.filter(isStretch);
+async function fetchByPrimaryTarget(target: string, maxItems = PAGE_SIZE * MAX_PAGES) {
+  const all: EdbExercise[] = [];
+  let cursor: string | undefined;
 
-  if (stretches.length >= 3) {
-    return stretches;
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const qs = new URLSearchParams({
+      targetMuscles: target,
+      limit: String(PAGE_SIZE),
+    });
+    if (cursor) qs.set("cursor", cursor);
+
+    const payload = await edbFetch<EdbListResponse>(`/exercises/muscles?${qs}`);
+    const batch = (payload.data ?? []).map(normalize);
+    all.push(...batch);
+
+    if (!payload.meta?.hasNextPage || !payload.meta?.nextCursor) break;
+    cursor = payload.meta.nextCursor;
+    if (all.length >= maxItems) break;
   }
 
-  // Fallback search — build GIF URLs without N detail requests
-  const search = new URLSearchParams({
-    search: muscle.stretchQuery,
-    threshold: "0.45",
-  });
-  const hits = await edbFetch<{ data?: EdbSearchHit[] }>(
-    `/exercises/search?${search}`,
-  );
+  return all.slice(0, maxItems);
+}
 
-  const seen = new Set(stretches.map((s) => s.exerciseId));
-  for (const hit of hits.data ?? []) {
-    if (seen.has(hit.exerciseId)) continue;
-    if (!/\bstretch\b/i.test(hit.name)) continue;
-    seen.add(hit.exerciseId);
-    stretches.push(
-      normalize({
-        exerciseId: hit.exerciseId,
-        name: hit.name,
-        gifUrl: `${GIF_BASE}/${hit.exerciseId}.gif`,
-        bodyParts: [],
-        equipments: ["body weight"],
-        targetMuscles: muscle.edbTargets.slice(0, 1),
-        secondaryMuscles: [],
-        instructions: [
-          "Follow the animated demonstration closely.",
-          "Move into the stretch gradually and breathe steadily.",
-          "Hold a mild comfortable tension — never sharp pain.",
-          "Switch sides when the stretch is one-sided.",
-        ],
-      }),
+/** Try targets in order until we have enough non-stretch exercises. */
+async function fetchExercises(muscle: Muscle) {
+  for (const target of muscle.edbTargets) {
+    try {
+      const items = await fetchByPrimaryTarget(target);
+      const exercises = dedupe(items.filter((item) => !isStretch(item)));
+      if (exercises.length > 0) return exercises;
+    } catch {
+      // try next target
+    }
+  }
+
+  try {
+    return dedupe(
+      (await searchExercises(muscle.edbTargets[0] ?? muscle.name, { limit: 24 })).filter(
+        (item) => !isStretch(item),
+      ),
     );
+  } catch {
+    return [] as EdbExercise[];
   }
-
-  return stretches;
 }
 
-export async function getExercisesForMuscle(muscle: Muscle, mode: Mode) {
+function placeholderInstructions(kind: "stretch" | "move") {
+  if (kind === "stretch") {
+    return [
+      "Follow the animated demonstration closely.",
+      "Move into the stretch gradually and breathe steadily.",
+      "Hold a mild comfortable tension — never sharp pain.",
+      "Switch sides when the stretch is one-sided.",
+    ];
+  }
+  return [
+    "Follow the animated demonstration closely.",
+    "Move with control and keep breathing steady.",
+    "Stop if you feel sharp pain.",
+  ];
+}
+
+export async function getExercisesForMuscle(
+  muscle: Muscle,
+  mode: Mode,
+  gender: Gender = "male",
+) {
   if (mode === "stretches") {
-    return (await fetchStretches(muscle)).slice(0, 16);
+    return preferGenderMedia(getLocalStretches(muscle.id), gender, muscle.id);
   }
 
-  const items = await fetchByPrimaryTarget(muscle.edbTargets[0], 25);
-  return items.filter((item) => !isStretch(item)).slice(0, 18);
+  const items = await fetchExercises(muscle);
+  return preferGenderMedia(items, gender, muscle.id).slice(0, EXERCISE_LIMIT);
 }
 
 export async function getExerciseById(id: string) {
@@ -132,6 +160,42 @@ export async function getExerciseById(id: string) {
       : (payload as EdbExercise);
   if (!item?.exerciseId) throw new Error("Exercise not found");
   return normalize(item);
+}
+
+/** Search ExerciseDB and return normalized hits with GIF URLs (no N+1 detail calls). */
+export async function searchExercises(
+  query: string,
+  opts: { preferStretch?: boolean; limit?: number } = {},
+) {
+  const { preferStretch = false, limit = 4 } = opts;
+  const search = new URLSearchParams({
+    search: query,
+    threshold: "0.4",
+  });
+  const hits = await edbFetch<{ data?: EdbSearchHit[] }>(
+    `/exercises/search?${search}`,
+  );
+
+  const ranked = [...(hits.data ?? [])].sort((a, b) => {
+    const aStretch = Number(isStretch(a));
+    const bStretch = Number(isStretch(b));
+    if (preferStretch && aStretch !== bStretch) return bStretch - aStretch;
+    if (!preferStretch && aStretch !== bStretch) return aStretch - bStretch;
+    return 0;
+  });
+
+  return ranked.slice(0, limit).map((hit) =>
+    normalize({
+      exerciseId: hit.exerciseId,
+      name: hit.name,
+      gifUrl: `${GIF_BASE}/${hit.exerciseId}.gif`,
+      bodyParts: [],
+      equipments: ["body weight"],
+      targetMuscles: [],
+      secondaryMuscles: [],
+      instructions: placeholderInstructions(preferStretch ? "stretch" : "move"),
+    }),
+  );
 }
 
 export { isStretch };

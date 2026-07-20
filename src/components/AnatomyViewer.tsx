@@ -12,6 +12,11 @@ type Props = {
   onSelect: (id: MuscleId) => void;
   onViewChange: (view: ViewSide) => void;
   onGenderChange: (gender: Gender) => void;
+  /** When set, only these muscles can be selected (e.g. running stride muscles). */
+  allowedIds?: MuscleId[];
+  /** Secondary highlight for related muscles (e.g. Learn mode). */
+  relatedIds?: MuscleId[];
+  labelEyebrow?: string;
 };
 
 const HIDDEN: Slug[] = ["hair", "head", "hands", "feet", "ankles", "knees", "neck", "tibialis"];
@@ -23,19 +28,51 @@ export function AnatomyViewer({
   onSelect,
   onViewChange,
   onGenderChange,
+  allowedIds,
+  relatedIds = [],
+  labelEyebrow = "Muscle focus",
 }: Props) {
   const active = selected ? muscles.find((m) => m.id === selected) : null;
 
   const data = useMemo(() => {
-    if (!active) return [] as ExtendedBodyPart[];
-    return [
-      {
+    if (allowedIds?.length) {
+      const parts: ExtendedBodyPart[] = allowedIds.map((id) => {
+        const m = muscles.find((muscle) => muscle.id === id);
+        if (!m) return null;
+        const isSelected = id === selected;
+        const isRelated = relatedIds.includes(id);
+        return {
+          slug: m.slug,
+          color: m.color,
+          intensity: isSelected ? 1 : isRelated ? 0.55 : 0.35,
+        };
+      }).filter(Boolean) as ExtendedBodyPart[];
+      return parts;
+    }
+
+    const parts: ExtendedBodyPart[] = [];
+
+    if (active) {
+      parts.push({
         slug: active.slug,
         color: active.color,
         intensity: 1,
-      },
-    ] as ExtendedBodyPart[];
-  }, [active]);
+      });
+    }
+
+    for (const id of relatedIds) {
+      if (id === selected) continue;
+      const m = muscles.find((muscle) => muscle.id === id);
+      if (!m) continue;
+      parts.push({
+        slug: m.slug,
+        color: m.color,
+        intensity: 0.55,
+      });
+    }
+
+    return parts;
+  }, [active, allowedIds, relatedIds, selected]);
 
   return (
     <div className="anatomy-stage">
@@ -86,19 +123,21 @@ export function AnatomyViewer({
             side={view}
             gender={gender}
             scale={1.15}
-            colors={[active?.color ?? "#c8f542"]}
+            colors={[active?.color ?? "#ff8c42"]}
             defaultFill="#4b5563"
             border="#1a222c"
             hiddenParts={HIDDEN}
             onBodyPartPress={(part) => {
               const match = muscles.find((m) => m.slug === part.slug);
-              if (match) onSelect(match.id);
+              if (!match) return;
+              if (allowedIds?.length && !allowedIds.includes(match.id)) return;
+              onSelect(match.id);
             }}
           />
         </div>
 
         <div className="anatomy-label" aria-live="polite">
-          <span className="anatomy-label-eyebrow">Muscle focus</span>
+          <span className="anatomy-label-eyebrow">{labelEyebrow}</span>
           <strong>{active?.name ?? "Select a muscle"}</strong>
         </div>
       </div>

@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
+  BookOpen,
   Dumbbell,
   ExternalLink,
   ListChecks,
@@ -10,7 +11,10 @@ import {
   Sparkles,
   Wrench,
 } from "lucide-react";
-import type { EdbExercise, Mode, Muscle } from "@/data/muscles";
+import type { EdbExercise, Mode, Muscle, MuscleId } from "@/data/muscles";
+import type { RunningMuscleFocus } from "@/data/running";
+import { displayExerciseName } from "@/lib/gender-media";
+import { MuscleLearnPanel } from "./MuscleLearnPanel";
 
 type Props = {
   muscle: Muscle;
@@ -18,9 +22,13 @@ type Props = {
   items: EdbExercise[];
   loading: boolean;
   error: string | null;
+  mediaNote?: string | null;
   selected: EdbExercise | null;
   onSelect: (item: EdbExercise | null) => void;
   onModeChange: (mode: Mode) => void;
+  onRelatedSelect?: (id: MuscleId) => void;
+  /** When set, panel shows running-specific context for this muscle. */
+  running?: RunningMuscleFocus;
 };
 
 export function DetailPanel({
@@ -29,27 +37,57 @@ export function DetailPanel({
   items,
   loading,
   error,
+  mediaNote,
   selected,
   onSelect,
   onModeChange,
+  onRelatedSelect,
+  running,
 }: Props) {
   return (
-    <div className="detail-panel">
+    <div className={`detail-panel ${running ? "running-detail-panel" : ""} ${selected ? "detail-panel-focused" : ""}`}>
       <header className="detail-header">
         <div
           className="muscle-swatch"
           style={{ background: muscle.color, boxShadow: `0 0 28px ${muscle.color}55` }}
         />
         <div>
-          <p className="eyebrow">Selected muscle</p>
-          <h2>{muscle.name}</h2>
-          <p className="latin">{muscle.latin}</p>
+          <p className="eyebrow">
+            {selected
+              ? mode === "stretches"
+                ? "Stretch detail"
+                : "Exercise detail"
+              : mode === "learn"
+                ? "Muscle anatomy"
+                : running
+                  ? "Running muscle"
+                  : "Selected muscle"}
+          </p>
+          <h2>{selected ? displayExerciseName(selected.name) : muscle.name}</h2>
+          <p className="latin">{selected ? muscle.name : running ? running.trainFocus : muscle.latin}</p>
         </div>
       </header>
 
-      <p className="muscle-blurb">{muscle.description}</p>
+      {!selected && mode !== "learn" && (
+      <p className="muscle-blurb">{running ? running.role : muscle.description}</p>
+      )}
 
-      <div className="mode-toggle" role="tablist" aria-label="Content mode">
+      {!selected && mode !== "learn" && mediaNote && (
+        <p className="media-note" role="note">
+          {mediaNote}
+        </p>
+      )}
+
+      {running && !selected && mode !== "learn" && (
+        <ul className="running-cue-list">
+          {running.cues.map((cue) => (
+            <li key={cue}>{cue}</li>
+          ))}
+        </ul>
+      )}
+
+      {!selected && (
+      <div className="mode-toggle mode-toggle-3" role="tablist" aria-label="Content mode">
         <button
           type="button"
           role="tab"
@@ -57,7 +95,7 @@ export function DetailPanel({
           className={mode === "exercises" ? "active" : ""}
           onClick={() => onModeChange("exercises")}
         >
-          <Dumbbell size={16} /> Exercises
+          <Dumbbell size={16} /> {running ? "Train" : "Exercises"}
         </button>
         <button
           type="button"
@@ -68,7 +106,17 @@ export function DetailPanel({
         >
           <Sparkles size={16} /> Stretches
         </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === "learn"}
+          className={mode === "learn" ? "active" : ""}
+          onClick={() => onModeChange("learn")}
+        >
+          <BookOpen size={16} /> Learn
+        </button>
       </div>
+      )}
 
       <AnimatePresence mode="wait">
         {selected ? (
@@ -85,6 +133,11 @@ export function DetailPanel({
             </button>
             <ExerciseDetail item={selected} accent={muscle.color} mode={mode} />
           </motion.div>
+        ) : mode === "learn" ? (
+          <MuscleLearnPanel
+            muscle={muscle}
+            onRelatedSelect={onRelatedSelect ?? (() => {})}
+          />
         ) : (
           <motion.div
             key={`${mode}-list`}
@@ -96,7 +149,7 @@ export function DetailPanel({
             {loading && (
               <div className="state-block">
                 <LoaderCircle className="spin" size={22} />
-                <p>Loading {mode} from ExerciseDB…</p>
+                <p>Loading {running ? "running " : ""}{mode === "stretches" ? "stretches" : mode}…</p>
               </div>
             )}
 
@@ -127,7 +180,7 @@ export function DetailPanel({
                         </span>
                       ))}
                     </div>
-                    <h3>{item.name}</h3>
+                    <h3>{displayExerciseName(item.name)}</h3>
                     <p>
                       Targets {(item.targetMuscles ?? []).join(", ") || muscle.name}
                       {(item.secondaryMuscles?.length ?? 0) > 0
@@ -139,18 +192,35 @@ export function DetailPanel({
               ))}
 
             {!loading && !error && items.length === 0 && (
-              <p className="empty">No {mode} found for this muscle yet.</p>
+              <p className="empty">
+                {running
+                  ? `No running-focused ${mode} found for this muscle yet.`
+                  : `No ${mode} found for this muscle yet.`}
+              </p>
             )}
           </motion.div>
         )}
       </AnimatePresence>
 
       <p className="api-credit">
-        Visuals &amp; data via{" "}
-        <a href="https://oss.exercisedb.dev" target="_blank" rel="noreferrer">
-          ExerciseDB <ExternalLink size={12} />
-        </a>{" "}
-        / AscendAPI · body map via react-muscle-highlighter
+        {mode === "learn" ? (
+          <>
+            Anatomical illustrations via{" "}
+            <a href="https://openstax.org/details/books/anatomy-and-physiology-2e" target="_blank" rel="noreferrer">
+              OpenStax <ExternalLink size={12} />
+            </a>{" "}
+            (CC BY 4.0) · body map via react-muscle-highlighter
+          </>
+        ) : (
+          <>
+            Visuals &amp; data via{" "}
+            <a href="https://oss.exercisedb.dev" target="_blank" rel="noreferrer">
+              ExerciseDB <ExternalLink size={12} />
+            </a>{" "}
+            / AscendAPI · body map via react-muscle-highlighter
+            {running ? " · running-curated picks" : ""}
+          </>
+        )}
       </p>
     </div>
   );
@@ -171,7 +241,6 @@ function ExerciseDetail({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={item.gifUrl} alt={`Demonstration of ${item.name}`} />
       </div>
-      <h3 className="capitalize">{item.name}</h3>
       <p className="lead">
         {mode === "stretches"
           ? "Follow the steps below and breathe into the stretch — stop shy of sharp pain."
@@ -181,38 +250,41 @@ function ExerciseDetail({
       <div className="stat-grid">
         <div>
           <span>Primary</span>
-          <strong>{(item.targetMuscles ?? []).join(", ") || "—"}</strong>
+          <strong>{formatMeta(item.targetMuscles)}</strong>
         </div>
         <div>
           <span>Secondary</span>
-          <strong>{(item.secondaryMuscles ?? []).join(", ") || "—"}</strong>
+          <strong>{formatMeta(item.secondaryMuscles)}</strong>
         </div>
         <div>
           <span>Equipment</span>
-          <strong>{(item.equipments ?? []).join(", ") || "body weight"}</strong>
+          <strong>{formatMeta(item.equipments, "body weight")}</strong>
         </div>
         <div>
           <span>Region</span>
-          <strong>{(item.bodyParts ?? []).join(", ") || "—"}</strong>
+          <strong>{formatMeta(item.bodyParts)}</strong>
         </div>
       </div>
 
-      <section>
+      <section className="steps-section">
         <h4>
           <ListChecks size={16} /> Step-by-step
         </h4>
-          {(item.instructions ?? []).length > 0 ? (
-            <ol className="steps">
-              {(item.instructions ?? []).map((step, i) => (
-                <li key={`${item.exerciseId}-${i}`}>
-                  <strong>Step {i + 1}</strong>
-                  <span>{step}</span>
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <p>Watch the GIF demonstration and match the body position carefully.</p>
-          )}
+        {(item.instructions ?? []).length > 0 ? (
+          <ol className="steps">
+            {(item.instructions ?? []).map((step, i) => (
+              <li key={`${item.exerciseId}-${i}`}>
+                <div className="step-content">
+                  <p>{step}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="steps-fallback">
+            Watch the GIF demonstration and match the body position carefully.
+          </p>
+        )}
       </section>
 
       {(item.equipments?.length ?? 0) > 0 && (
@@ -222,4 +294,9 @@ function ExerciseDetail({
       )}
     </article>
   );
+}
+
+function formatMeta(values: string[] | undefined, fallback = "—") {
+  if (!values?.length) return fallback;
+  return values.map((v) => v.replace(/\b\w/g, (c) => c.toUpperCase())).join(", ");
 }

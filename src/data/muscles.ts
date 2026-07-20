@@ -18,7 +18,7 @@ export type MuscleId =
   | "adductors";
 
 export type ViewSide = "front" | "back";
-export type Mode = "exercises" | "stretches";
+export type Mode = "exercises" | "stretches" | "learn";
 export type Gender = "male" | "female";
 
 export interface Muscle {
@@ -34,6 +34,8 @@ export interface Muscle {
   edbTargets: string[];
   /** Keywords used when searching for stretches */
   stretchQuery: string;
+  /** Extra stretch search terms for richer results */
+  stretchQueries?: string[];
 }
 
 export interface EdbExercise {
@@ -59,6 +61,7 @@ export const muscles: Muscle[] = [
     views: ["front"],
     edbTargets: ["pectorals", "chest", "upper chest"],
     stretchQuery: "chest stretch",
+    stretchQueries: ["doorway chest stretch", "pec stretch", "upper chest stretch"],
   },
   {
     id: "deltoids",
@@ -69,8 +72,9 @@ export const muscles: Muscle[] = [
       "Three heads wrap the shoulder joint. Strong delts stabilize presses, protect the rotator cuff pathway, and create upper-body width.",
     color: "#ff9f1c",
     views: ["front", "back"],
-    edbTargets: ["deltoids", "delts", "shoulders", "rear deltoids"],
+    edbTargets: ["delts", "deltoids", "shoulders", "rear deltoids"],
     stretchQuery: "shoulder stretch",
+    stretchQueries: ["cross body shoulder stretch", "rear delt stretch", "overhead shoulder stretch"],
   },
   {
     id: "biceps",
@@ -83,6 +87,7 @@ export const muscles: Muscle[] = [
     views: ["front"],
     edbTargets: ["biceps", "brachialis"],
     stretchQuery: "biceps stretch",
+    stretchQueries: ["doorway biceps stretch", "arm stretch"],
   },
   {
     id: "triceps",
@@ -95,6 +100,7 @@ export const muscles: Muscle[] = [
     views: ["back"],
     edbTargets: ["triceps"],
     stretchQuery: "triceps stretch",
+    stretchQueries: ["overhead triceps stretch", "cross body triceps stretch"],
   },
   {
     id: "forearm",
@@ -107,6 +113,7 @@ export const muscles: Muscle[] = [
     views: ["front", "back"],
     edbTargets: ["forearms", "wrist flexors", "wrist extensors", "grip muscles"],
     stretchQuery: "wrist stretch",
+    stretchQueries: ["forearm stretch", "wrist flexor stretch", "wrist extensor stretch"],
   },
   {
     id: "abs",
@@ -119,6 +126,7 @@ export const muscles: Muscle[] = [
     views: ["front"],
     edbTargets: ["abs", "abdominals", "lower abs", "core"],
     stretchQuery: "abs stretch",
+    stretchQueries: ["cobra stretch", "cat cow stretch", "child pose"],
   },
   {
     id: "obliques",
@@ -131,6 +139,7 @@ export const muscles: Muscle[] = [
     views: ["front"],
     edbTargets: ["obliques"],
     stretchQuery: "oblique stretch",
+    stretchQueries: ["side bend stretch", "torso twist stretch", "side stretch"],
   },
   {
     id: "quadriceps",
@@ -143,6 +152,7 @@ export const muscles: Muscle[] = [
     views: ["front"],
     edbTargets: ["quadriceps", "quads"],
     stretchQuery: "quad stretch",
+    stretchQueries: ["hip flexor stretch", "kneeling quad stretch", "standing quad stretch"],
   },
   {
     id: "hamstring",
@@ -155,6 +165,7 @@ export const muscles: Muscle[] = [
     views: ["back"],
     edbTargets: ["hamstrings"],
     stretchQuery: "hamstring stretch",
+    stretchQueries: ["seated hamstring stretch", "standing hamstring stretch", "toe touch stretch"],
   },
   {
     id: "gluteal",
@@ -167,6 +178,7 @@ export const muscles: Muscle[] = [
     views: ["back"],
     edbTargets: ["glutes"],
     stretchQuery: "glute stretch",
+    stretchQueries: ["piriformis stretch", "figure four stretch", "pigeon stretch"],
   },
   {
     id: "calves",
@@ -179,6 +191,7 @@ export const muscles: Muscle[] = [
     views: ["front", "back"],
     edbTargets: ["calves", "soleus"],
     stretchQuery: "calf stretch",
+    stretchQueries: ["wall calf stretch", "downward dog", "soleus stretch"],
   },
   {
     id: "trapezius",
@@ -191,6 +204,7 @@ export const muscles: Muscle[] = [
     views: ["back"],
     edbTargets: ["traps", "trapezius"],
     stretchQuery: "trapezius stretch",
+    stretchQueries: ["neck stretch", "upper trap stretch", "levator scapulae stretch"],
   },
   {
     id: "upper-back",
@@ -203,6 +217,7 @@ export const muscles: Muscle[] = [
     views: ["back"],
     edbTargets: ["lats", "latissimus dorsi", "upper back", "rhomboids"],
     stretchQuery: "lat stretch",
+    stretchQueries: ["child pose", "overhead lat stretch", "doorway lat stretch"],
   },
   {
     id: "lower-back",
@@ -215,6 +230,7 @@ export const muscles: Muscle[] = [
     views: ["back"],
     edbTargets: ["lower back", "spine"],
     stretchQuery: "lower back stretch",
+    stretchQueries: ["cat cow stretch", "knee to chest stretch", "spinal twist stretch"],
   },
   {
     id: "adductors",
@@ -227,6 +243,7 @@ export const muscles: Muscle[] = [
     views: ["front"],
     edbTargets: ["adductors", "inner thighs", "groin"],
     stretchQuery: "adductor stretch",
+    stretchQueries: ["groin stretch", "butterfly stretch", "side lunge stretch"],
   },
 ];
 

@@ -15,7 +15,7 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "FORMA — Anatomy-led Workout & Stretch Lab",
+  title: "Workout — Anatomy-led Training & Stretch Lab",
   description:
     "Select a muscle on a 3D body, then explore tailored exercises and stretches with visual form guides and detailed coaching cues.",
 };

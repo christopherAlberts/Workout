@@ -1,4 +1,4 @@
-# FORMA — Anatomy-led Workout Lab
+# Workout — Anatomy-led Training Lab
 
 Interactive workout web app: select a muscle on a **real anatomical body map**, then browse **exercises** and **stretches** with **animated GIF demos** and step-by-step coaching.
 
@@ -6,6 +6,7 @@ Interactive workout web app: select a muscle on a **real anatomical body map**, 
 
 - Anatomical SVG body map (male/female, front/back) via [`react-muscle-highlighter`](https://www.npmjs.com/package/react-muscle-highlighter)
 - Live exercise & stretch data from [ExerciseDB](https://oss.exercisedb.dev) (AscendAPI free tier)
+- **Running mode** — select stride muscles (calves, glutes, hamstrings, etc.) and browse running-focused strength & stretch work with GIF demos
 - Animated demonstration GIFs for each movement
 - Instructions, equipment, primary/secondary muscles
 - Responsive desktop + mobile layout
